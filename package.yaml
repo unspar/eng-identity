@@ -38,7 +38,11 @@ dependencies:
 - fast-logger >=2.2 && <2.5
 - wai-logger >=2.2 && <2.4
 - file-embed
+- jose >=0.6
+- mtl
 - safe
+- uuid
+- bcrypt
 - unordered-containers
 - containers
 - vector
