@@ -2,57 +2,56 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 module Handler.Auth where
-import Import 
-import Data.Time as DT
-import Crypto.JWT
-import Data.Aeson as DA
+import  Import 
+import qualified Data.Time as DT
+import qualified Crypto.JWT as JWT
 import Control.Monad.Except (runExceptT)
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Crypto.JOSE.JWK as JWK
+import qualified Crypto.BCrypt as BC
+import qualified Data.Aeson as DA
+import qualified System.Environment as SE
+import qualified Data.ByteString.Lazy as DBL
 
 data AuthRequest = AuthRequest{
-  email:: Text, 
-  password:: Text
+  ident::T.Text, 
+  password:: T.Text
 } deriving (Show,Generic)
 
+instance DA.ToJSON AuthRequest
+instance DA.FromJSON AuthRequest
 
-instance ToJSON AuthRequest
-instance FromJSON AuthRequest
+data AuthResponse = AuthResponse {
+  success :: Bool,
+  response :: T.Text
+} deriving (Show, Generic)
+instance DA.ToJSON AuthResponse
+instance DA.FromJSON AuthResponse
+
+doJwtSign :: JWK.JWK -> JWT.ClaimsSet -> IO (Either JWT.JWTError JWT.SignedJWT)
+doJwtSign key_obj claims = runExceptT $ do
+  signing_algo <- JWK.bestJWSAlg key_obj
+  JWT.signClaims key_obj (JWT.newJWSHeader ((), signing_algo)) claims
 
 
---sample_claim :: ByteString
-sample_claim = "{\"sub\": \"1234567890\",\"name\": \"John Doe\",\"admin\": true}"
-sample_keyfile = "{\"keys\":[{\"kty\":\"RSA\",\"d\":\"l3iu9_ezwrz78AgU4RHgf6o3Zbn3SirXXprhQuCZKFjlBjhE52IMDny3GRm5a9qPJ-aK2G3Nvweg7OJaLXPFhiGY9ZxFFCFpINjTIXClKOqFO4P_pnN4fmNJUC6_ViAn__Ur18zgpI-O9MBZEbxDMSdk_NcgQmzGYmIIXxaVAXLzzhVruFQoqEZPxMCyc-eRHS9enLaktxAHUZZ41F0ep-UnS9iBOe_InwjC414fLBBnmFyKcc_dAcbojyyqC_94E3Q9SXFaY7oWRlEBhV28rKSh681TKHTmpWH2umXUNZ2S3TUTzkzRT5_58Xwox5rhs44Vy0h8uOUvzaTVGFWN4Q\",\"e\":\"AQAB\",\"use\":\"sig\",\"kid\":\"test 1\",\"alg\":\"RS256\",\"n\":\"puVpd5wyzB1UhF93RslLclM3rQZ-qGFhLC-D5fpEa4E2BQPwTDFj0eYzQmwgY8zhvr3v80wnuHlWVv0ai8i3Jo9NDglGEgBVH_7YsE6IZA6o8rbzEG_3rO62x1Nbb-929lAAVM74mnYvU-g7k2zcJTtaMejH0GcOxID1byzzd42aP3Ei8gdVqa736ch_wHiVKSzyzWOVGQoY2ZFwkqn4j2a1Fx4jNkPU6q2fICRVXqQK502Rh7yqhwb2YqhivdlsJFdtsAx1LbFGAr--btkZKfw-Uvqi3d__97esmQTIWPZhvJL5jXS_tBtd53u4SdJxjLjnhndn6c0MzWwNv9QOkQ\"}]}"
 
-
-{-
-doJwtSign :: IO ()
-doJwtSign = do
-  Just jwk <- decode <$> L.readFile jwkFilename
-  Just claims <- decode <$> sample_claim
-  result <- runExceptT $ do
-    alg <- bestJWSAlg jwk
-    signClaims jwk (newJWSHeader ((), alg)) claims
-  case result of
-    Left e -> print (e :: Error) >> exitFailure
-    Right jwt -> L.putStr (encodeCompact jwt)
--}
 postAuthR :: Handler Value
 postAuthR = do
   auth_request <- (requireJsonBody :: Handler AuthRequest)
+  key_loc <- liftIO (SE.getEnv "JWK_PATH") 
+  Just jwk <- liftIO $ DA.decode <$> DBL.readFile key_loc
+  let claims = JWT.emptyClaimsSet
+  --new_key <- JWK.genJWK (JWK.RSAGenParam (4096 `div` 8))
+  user <- runDB $ getBy404 $ (UniqueUser  (ident auth_request))
+  let atpw = encodeUtf8 $ password auth_request
+      actpw = encodeUtf8 $userPassword $entityVal user
+      success = BC.validatePassword actpw atpw 
+  --time <- liftIO DT.getCurrentTime
+  signed_key <- liftIO $ doJwtSign jwk claims
+  let jwk_key = case signed_key of Left e -> pack (show e)
+                                   Right s_token-> TL.toStrict (decodeUtf8 $ JWT.encodeCompact s_token)
+  case success of True -> returnJson (AuthResponse True jwk_key)
+                  False -> returnJson (AuthResponse False "Password failed")
 
-  let claims = (DA.decode sample_claim :: Maybe Value)
-  let keyfile = (DA.decode sample_keyfile ::Maybe Value)
-  let jwk = case keyfile of Just k -> k
-
-  time <- liftIO DT.getCurrentTime
-  result <- runExceptT $ do
-    alg <- bestJWSAlg jwk
-    signClaims jwk (newJWSHeader ((), alg)) claims
-  case result of
-    Left e -> returnJson auth_request
-    Right jwt -> returnJson (encodeCompact jwt)
-
-  --query database for user
-
-  --if user doesn't exist, yield jwt with status message
-  --if user exists, yeidl jwt with 
 

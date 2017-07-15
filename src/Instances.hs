@@ -25,7 +25,7 @@ instance PersistField UUID where
 instance PersistFieldSql UUID where
   sqlType _ = SqlOther "uuid"
 
-
+{-
 instance ToJSON UUID where
   toJSON u =  String $ UUID.toText u
 
@@ -37,7 +37,7 @@ instance FromJSON UUID where
       parse_uuid x = case (UUID.fromText x) of
         Just u -> return u
         Nothing -> return UUID.nil --default is empty, NOT error
-
+-}
 instance PathPiece UUID where
   toPathPiece u = UUID.toText u
   fromPathPiece mbu = UUID.fromText mbu

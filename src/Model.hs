@@ -24,7 +24,7 @@ User json
   uuid UUID sqltype=uuid default=uuid_generate_v4()
   Primary uuid
   ident Text --email?
-  password Text Maybe
+  password Text
   UniqueUser ident
   deriving Typeable
 Email

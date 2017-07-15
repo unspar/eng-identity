@@ -28,9 +28,9 @@ postCreateR = do
   --check if new_user uuid == nil  if so throw error
   reg <- (requireJsonBody :: Handler RegistrationForm) 
   let pw = encodeUtf8 (password reg)
-  hashed_pw <-liftIO( BC.hashPasswordUsingPolicy BC.slowerBcryptHashingPolicy pw)
-  let pass = case hashed_pw of Just b_pass ->Just ( decodeUtf8  b_pass)
-                               Nothing -> Nothing
+  hashed_pw <-liftIO( BC.hashPasswordUsingPolicy BC.fastBcryptHashingPolicy pw)
+  let pass = case hashed_pw of Just b_pass ->( decodeUtf8  b_pass)
+                               Nothing -> ""
   new_user_id <- liftIO UUID4.nextRandom
   let new_user =  User new_user_id  (email_address reg) pass
   inserted_user <- runDB $ insertEntity new_user
