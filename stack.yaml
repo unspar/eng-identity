@@ -3,6 +3,7 @@ extra-package-dbs: []
 packages:
 - '.'
 extra-deps:
+- esqueleto-2.5.3
 - aeson-1.2.1.0
 - base-orphans-0.6
 - jose-0.6.0.2

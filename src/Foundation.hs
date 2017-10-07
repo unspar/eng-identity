@@ -68,12 +68,15 @@ instance Yesod App where
             Nothing -> getApprootText guessApproot app req
             Just root -> root
 
+    
+    makeSessionBackend _ = do return Nothing
     -- Store session data on the client in encrypted cookies,
     -- default session idle timeout is 120 minutes
+    {-
     makeSessionBackend _ = Just <$> defaultClientSessionBackend
         120    -- timeout in minutes
         "config/client_session_key.aes"
-
+    -}
     -- Yesod Middleware allows you to run code before and after each handler function.
     -- The defaultYesodMiddleware adds the response header "Vary: Accept, Accept-Language" and performs authorization checks.
     -- Some users may also want to add the defaultCsrfMiddleware, which:
@@ -120,7 +123,7 @@ instance Yesod App where
     isAuthorized FaviconR _ = return Authorized
     isAuthorized RobotsR _ = return Authorized
     isAuthorized (StaticR _) _ = return Authorized
-    isAuthorized CreateR _ = return Authorized
+    isAuthorized UserR _ = return Authorized
     isAuthorized ProfileR _ = isAuthenticated
 
     -- This function creates static content files in the static folder

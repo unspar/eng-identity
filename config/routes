@@ -11,7 +11,7 @@
 /profile ProfileR GET
 
 
-/create CreateR POST
+/user UserR POST DELETE GET
 
 
 

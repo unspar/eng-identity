@@ -22,10 +22,22 @@ import Data.UUID (UUID)
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 User json
   uuid UUID sqltype=uuid default=uuid_generate_v4()
-  Primary uuid
+  UniqueUuid uuid
   ident Text --email?
   password Text
   UniqueUser ident
+  deriving Typeable
+Role json
+  uuid UUID sqltype=uuid default=uuid_generate_v4()
+  Primary uuid
+  name Text
+  UniqueRole uuid
+  deriving Typeable
+Userrole json
+  uuid UUID sqltype=uuid default=uuid_generate_v4()
+  Primary uuid
+  role RoleId
+  user UserId
   deriving Typeable
 Email
   email Text
